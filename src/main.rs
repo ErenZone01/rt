@@ -36,8 +36,9 @@ fn color(r: &Ray, world: &HittableList, depth: i32) -> Vec3 {
     } else {
         let unit_direction = Vec3::unit_vector(&r.direction());
         let t = 0.5 * (unit_direction.y() + 1.0);
-
-        Vec3::new(1.0, 1.0, 1.0) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t
+        let intensity = 1.5;  // Augmenter cette valeur pour plus de lumière
+        Vec3::new(1.0, 1.0, 1.0) * (1.0 - t) * intensity + Vec3::new(0.5, 0.7, 1.0) * t * intensity
+         
     }
 }
 
@@ -60,6 +61,58 @@ fn main() {
                     })
                 )
             );
+
+            let aspect_ratio = (width as f32) / (height as f32);
+            let mut look_from = Point3::new(13.0, 10.0, 10.0);
+            let mut look_at = Point3::new(0.0, 0.0, 0.0);
+            let mut vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let apeture = 0.1;
+            //check scene
+            if !args[2].is_empty() {
+                match args[2].as_str() {
+                    "default" => {
+                        look_from = Point3::new(13.0, 10.0, 10.0);
+                        look_at = Point3::new(0.0, 0.0, 0.0);
+                        vup = Vec3::new(0.0, 1.0, 0.0);
+                    }
+                    "scene1" => {
+                        // Caméra vue de côté gauche
+                        look_from = Point3::new(-13.0, 5.0, 3.0);
+                        look_at = Point3::new(0.0, 0.0, 0.0);
+                        vup = Vec3::new(0.0, 1.0, 0.0);
+                    }
+                    "scene2" => {
+                        // Caméra vue de côté droit
+                        look_from = Point3::new(13.0, 5.0, -3.0);
+                        look_at = Point3::new(0.0, 0.0, 0.0);
+                        vup = Vec3::new(0.0, 1.0, 0.0);
+                    }
+                    "scene3" => {
+                        // Caméra vue de dessus
+                        look_from = Point3::new(0.0, 20.0, 0.0);
+                        look_at = Point3::new(0.0, 0.0, 0.0);
+                        vup = Vec3::new(1.0, 0.0, 0.0); // vecteur vers le haut aligné horizontalement
+                    }
+                    _ => {
+                        actif = true;
+                    }
+                }
+            }
+            if actif {
+                eprintln!("scene not found");
+                return;
+            }
+            let cam = Camera::camera(
+                look_from,
+                look_at,
+                vup,
+                20.0,
+                aspect_ratio,
+                apeture,
+                dist_to_focus
+            );
+            //choose the shape
             for v in args[1].split_whitespace().into_iter().collect::<Vec<&str>>() {
                 match v {
                     "sphere" => {
@@ -85,33 +138,13 @@ fn main() {
                                 Cylinder::cylinder(
                                     Point3::new(1.0, 0.0, -1.0), // Centre de la base du cylindre
                                     2.0, // Hauteur du cylindre
-                                    0.5, // Rayon du cylindre
+                                    1.5, // Rayon du cylindre
                                     cylinder_material
                                 )
                             )
                         );
                     }
                     "cube" => {
-                        let cube_material = Material::Lambertian {
-                            albedo: Vec3::new(0.4, 0.4, 0.8),
-                        };
-                        let cube_min = Point3::new(-3.5, -1.5, 0.0);
-                        let cube_max = Point3::new(-0.5, 1.5, 3.5);
-
-                        list.push(Box::new(Cube::new(cube_min, cube_max, cube_material)));
-                    }
-                    "all" => {
-                        list.push(
-                            Box::new(
-                                Sphere::sphere(
-                                    Point3::new(2.0, 1.0, 0.0),
-                                    1.0,
-                                    Material::Dielectric {
-                                        ref_idx: 1.5,
-                                    }
-                                )
-                            )
-                        );
                         let cube_material = Material::Lambertian {
                             albedo: Vec3::new(0.4, 0.4, 0.8),
                         };
@@ -128,33 +161,11 @@ fn main() {
             }
             if actif {
                 eprintln!(
-                    "Error shape no identify, Please check between: sphere, cube, cylindre or all"
+                    "Error shape no identify, Please check between: sphere, cube or cylindre"
                 );
                 return;
             }
-            //println!("j'ai un argument : {} ", args[1]);
-
             let world = HittableList::new(list);
-
-            let aspect_ratio = (width as f32) / (height as f32);
-            let look_from = Point3::new(13.0, 10.0, 10.0);
-            let look_at = Point3::new(0.0, 0.0, 0.0);
-            let vup = Vec3::new(0.0, 1.0, 0.0);
-            let dist_to_focus = 10.0;
-            let apeture = 0.1;
-
-            let   cam = Camera::camera(
-                look_from,
-                look_at,
-                vup,
-                20.0,
-                aspect_ratio,
-                apeture,
-                dist_to_focus
-            );
-            // Rotation de la caméra
-            //cam.adjust_yaw( 5.0); // Rotation à droite (angle en degrés)
-            //cam.adjust_pitch(-4.0); // Rotation vers le bas (angle en degrés)
 
             let mut screen = vec![(0u32, 0u32, 0u32); width * height];
             let start = time::Instant::now();
