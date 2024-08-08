@@ -4,19 +4,21 @@ mod hittable_list;
 mod material;
 mod ray;
 mod sphere;
+mod cylindre;
 mod cube;
 mod vec3;
 
 use camera::Camera;
 use hittable::Hittable;
 use hittable_list::HittableList;
-use material::{scatter, Material};
+use material::{ scatter, Material };
 use ray::Ray;
 use sphere::Sphere;
+use cylindre::Cylinder;
 use cube::Cube;
-use vec3::{Vec3, Point3}; // Import Point3 alias
+use vec3::{ Vec3, Point3 }; // Import Point3 alias
 
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ ProgressBar, ProgressStyle };
 use rand::prelude::*;
 use rayon::prelude::*;
 use std::time;
@@ -38,162 +40,174 @@ fn color(r: &Ray, world: &HittableList, depth: i32) -> Vec3 {
         Vec3::new(1.0, 1.0, 1.0) * (1.0 - t) + Vec3::new(0.5, 0.7, 1.0) * t
     }
 }
+
+use std::env;
 fn main() {
     let width = 400;
     let height = 200;
     let samples = 100;
     let max_value = 255;
+    let args: Vec<String> = env::args().collect();
+    let mut actif = false;
+    if args.len() >= 2 {
+        if !args[1].is_empty() {
+            let mut list: Vec<Box<dyn Hittable>> = Vec::new();
+            // Ajoute une grande sphère au sol
+            list.push(
+                Box::new(
+                    Sphere::sphere(Point3::new(0.0, -1000.0, 0.0), 1000.0, Material::Lambertian {
+                        albedo: Vec3::new(0.8, 0.3, 0.5),
+                    })
+                )
+            );
+            for v in args[1].split_whitespace().into_iter().collect::<Vec<&str>>() {
+                match v {
+                    "sphere" => {
+                        list.push(
+                            Box::new(
+                                Sphere::sphere(
+                                    Point3::new(2.0, 1.0, 0.0),
+                                    1.0,
+                                    Material::Dielectric {
+                                        ref_idx: 1.5,
+                                    }
+                                )
+                            )
+                        );
+                    }
+                    "cylindre" => {
+                        let cylinder_material = Material::Lambertian {
+                            albedo: Vec3::new(0.8, 0.3, 0.3),
+                        };
 
-    let mut list: Vec<Box<dyn Hittable>> = Vec::new();
+                        list.push(
+                            Box::new(
+                                Cylinder::cylinder(
+                                    Point3::new(1.0, 0.0, -1.0), // Centre de la base du cylindre
+                                    2.0, // Hauteur du cylindre
+                                    0.5, // Rayon du cylindre
+                                    cylinder_material
+                                )
+                            )
+                        );
+                    }
+                    "cube" => {
+                        let cube_material = Material::Lambertian {
+                            albedo: Vec3::new(0.4, 0.4, 0.8),
+                        };
+                        let cube_min = Point3::new(-3.5, -1.5, 0.0);
+                        let cube_max = Point3::new(-0.5, 1.5, 3.5);
 
-    // Ajoute une grande sphère au sol
-    list.push(Box::new(Sphere::sphere(
-        Point3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        Material::Lambertian {
-            albedo: Vec3::new(0.5, 0.5, 0.5),
-        },
-    )));
+                        list.push(Box::new(Cube::new(cube_min, cube_max, cube_material)));
+                    }
+                    "all" => {
+                        list.push(
+                            Box::new(
+                                Sphere::sphere(
+                                    Point3::new(2.0, 1.0, 0.0),
+                                    1.0,
+                                    Material::Dielectric {
+                                        ref_idx: 1.5,
+                                    }
+                                )
+                            )
+                        );
+                        let cube_material = Material::Lambertian {
+                            albedo: Vec3::new(0.4, 0.4, 0.8),
+                        };
+                        let cube_min = Point3::new(-3.5, -1.5, 0.0);
+                        let cube_max = Point3::new(-0.5, 1.5, 3.5);
 
-    // Ajoute des sphères colorées
-    //let mut rng = rand::thread_rng();
-    // for a in -11..11 {
-    //     for b in -11..11 {
-    //         let choose_mat = rng.gen::<f32>();
-    //         let centre = Point3::new(
-    //             a as f32 + 0.9 * rng.gen::<f32>(),
-    //             0.2,
-    //             b as f32 + 0.9 * rng.gen::<f32>(),
-    //         );
+                        list.push(Box::new(Cube::new(cube_min, cube_max, cube_material)));
+                    }
+                    _ => {
+                        actif = true;
+                        break;
+                    }
+                }
+            }
+            if actif {
+                eprintln!(
+                    "Error shape no identify, Please check between: sphere, cube, cylindre or all"
+                );
+                return;
+            }
+            //println!("j'ai un argument : {} ", args[1]);
 
-    //         if (centre - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-    //             if choose_mat < 0.8 {
-    //                 let albedo = Vec3::random() * Vec3::random();
-    //                 list.push(Box::new(Sphere::sphere(
-    //                     centre,
-    //                     0.2,
-    //                     Material::Lambertian { albedo },
-    //                 )));
-    //             } else if choose_mat < 0.95 {
-    //                 let albedo = Vec3::random_init(0.5, 1.0);
-    //                 let fuzz = rng.gen_range(0.0,0.5);
-    //                 list.push(Box::new(Sphere::sphere(
-    //                     centre,
-    //                     0.2,
-    //                     Material::Metal { albedo, fuzz },
-    //                 )));
-    //             } else {
-    //                 list.push(Box::new(Sphere::sphere(
-    //                     centre,
-    //                     0.2,
-    //                     Material::Dielectric { ref_idx: 1.5 },
-    //                 )));
-    //             }
-    //         }
-    //     }
-    // }
+            let world = HittableList::new(list);
 
-    // Ajout d'un cube
-    let cube_material = Material::Lambertian {
-        albedo: Vec3::new(0.4, 0.4, 0.8), 
-    };
+            let aspect_ratio = (width as f32) / (height as f32);
+            let look_from = Point3::new(13.0, 10.0, 10.0);
+            let look_at = Point3::new(0.0, 0.0, 0.0);
+            let vup = Vec3::new(0.0, 1.0, 0.0);
+            let dist_to_focus = 10.0;
+            let apeture = 0.1;
 
-    let cube_min = Point3::new(-0.5, -0.5, -0.5);
-    let cube_max = Point3::new(0.5, 0.5, 0.5);
+            let   cam = Camera::camera(
+                look_from,
+                look_at,
+                vup,
+                20.0,
+                aspect_ratio,
+                apeture,
+                dist_to_focus
+            );
+            // Rotation de la caméra
+            //cam.adjust_yaw( 5.0); // Rotation à droite (angle en degrés)
+            //cam.adjust_pitch(-4.0); // Rotation vers le bas (angle en degrés)
 
-    list.push(Box::new(Cube::new(cube_min, cube_max, cube_material)));
+            let mut screen = vec![(0u32, 0u32, 0u32); width * height];
+            let start = time::Instant::now();
 
-    // Ajout d'autres sphères
-    // list.push(Box::new(Sphere::sphere(
-    //     Point3::new(0.0, 1.0, 0.0),
-    //     1.0,
-    //     Material::Dielectric { ref_idx: 1.5 },
-    // )));
-    // list.push(Box::new(Sphere::sphere(
-    //     Point3::new(-4.0, 1.0, 0.0),
-    //     1.0,
-    //     Material::Lambertian {
-    //         albedo: Vec3::new(0.4, 0.2, 0.1),
-    //     },
-    // )));
-    // list.push(Box::new(Sphere::sphere(
-    //     Point3::new(4.0, 1.0, 0.0),
-    //     1.0,
-    //     Material::Metal {
-    //         albedo: Vec3::new(0.7, 0.6, 0.5),
-    //         fuzz: 0.0,
-    //     },
-    // )));
+            let bar = ProgressBar::new((width * height) as u64);
+            bar.set_style(
+                ProgressStyle::default_bar()
+                    .template(
+                        "{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {percent}% ({pos}/{len}, ETA {eta})"
+                    )
+                    .progress_chars("#>-")
+            );
 
-    let world = HittableList::new(list);
+            screen
+                .par_iter_mut()
+                .enumerate()
+                .for_each(|(index, pixel)| {
+                    let mut rng = rand::thread_rng();
+                    let column = index % width;
+                    let row = height - index / width;
 
-    let aspect_ratio = width as f32 / height as f32;
-    let look_from = Point3::new(13.0, 2.0, 3.0);
-    let look_at = Point3::new(0.0, 0.0, 0.0);
-    let vup = Vec3::new(0.0, 1.0, 0.0);
+                    let mut col = Vec3::default();
 
-    let dist_to_focus = 10.0;
-    let apeture = 0.1;
+                    for _ in 0..samples {
+                        let u = ((column as f32) + rng.gen::<f32>()) / (width as f32);
+                        let v = ((row as f32) + rng.gen::<f32>()) / (height as f32);
 
-    let cam = Camera::camera(
-        look_from,
-        look_at,
-        vup,
-        20.0,
-        aspect_ratio,
-        apeture,
-        dist_to_focus,
-    );
+                        let r = &cam.get_ray(u, v);
+                        col = col + color(&r, &world, 0);
+                    }
 
-    let mut screen = vec![(0u32, 0u32, 0u32); width * height];
-    let start = time::Instant::now();
+                    col = col / (samples as f32);
+                    col = Vec3::new(col.r().sqrt(), col.g().sqrt(), col.b().sqrt());
 
-    let bar = ProgressBar::new((width * height) as u64);
-    bar.set_style(
-        ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {percent}% ({pos}/{len}, ETA {eta})")
-            .progress_chars("#>-"),
-    );
+                    let ir = (255.99 * col.r()) as u32;
+                    let ig = (255.99 * col.g()) as u32;
+                    let ib = (255.99 * col.b()) as u32;
 
-    screen
-        .par_iter_mut()
-        .enumerate()
-        .for_each(|(index, pixel)| {
-            let mut rng = rand::thread_rng();
-            let column = index % width;
-            let row = height - index / width;
+                    *pixel = (ir, ig, ib);
+                    bar.inc(1);
+                });
+            bar.finish_with_message("Rendering complete");
 
-            let mut col = Vec3::default();
+            eprintln!("Number of pixels generated: {}", screen.len());
 
-            for _ in 0..samples {
-                let u = (column as f32 + rng.gen::<f32>()) / width as f32;
-                let v = (row as f32 + rng.gen::<f32>()) / height as f32;
+            println!("P3\n{} {}\n{}", width, height, max_value);
 
-                let r = &cam.get_ray(u, v);
-                col = col + color(&r, &world, 0);
+            for (r, g, b) in screen {
+                println!("{} {} {}", r, g, b);
             }
 
-            col = col / samples as f32;
-            col = Vec3::new(col.r().sqrt(), col.g().sqrt(), col.b().sqrt());
-
-            let ir = (255.99 * col.r()) as u32;
-            let ig = (255.99 * col.g()) as u32;
-            let ib = (255.99 * col.b()) as u32;
-
-            *pixel = (ir, ig, ib);
-            bar.inc(1);
-        });
-
-    bar.finish_with_message("Rendering complete");
-
-    eprintln!("Number of pixels generated: {}", screen.len());
-
-    println!("P3\n{} {}\n{}", width, height, max_value);
-
-    for (r, g, b) in screen {
-        println!("{}, {}, {}", r, g, b);
+            let duration = time::Instant::now() - start;
+            eprintln!("Render elapsed time: {:?}", duration);
+        }
     }
-
-    let duration = time::Instant::now() - start;
-    eprintln!("Render elapsed time: {:?}", duration);
 }

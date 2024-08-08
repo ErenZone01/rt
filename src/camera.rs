@@ -60,6 +60,25 @@ impl Camera {
             self.lower_left_corner + s * self.horizontal + t * self.vertical - self.origin - offset,
         )
     }
+    pub fn adjust_yaw(&mut self, angle: f32) {
+        let radius = self.origin.length();
+        let theta = angle.to_radians();
+        self.origin = Vec3::new(
+            radius * theta.cos(),
+            self.origin.y(),
+            radius * theta.sin(),
+        );
+    }
+
+    pub fn adjust_pitch(&mut self, angle: f32) {
+        let radius = self.origin.length();
+        let phi = angle.to_radians();
+        self.origin = Vec3::new(
+            self.origin.x(),
+            radius * phi.cos(),
+            radius * phi.sin(),
+        );
+    }
 }
 
 fn random_in_unit_disk() -> Vec3 {
