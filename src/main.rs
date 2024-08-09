@@ -36,9 +36,8 @@ fn color(r: &Ray, world: &HittableList, depth: i32) -> Vec3 {
     } else {
         let unit_direction = Vec3::unit_vector(&r.direction());
         let t = 0.5 * (unit_direction.y() + 1.0);
-        let intensity = 1.5;  // Augmenter cette valeur pour plus de lumière
+        let intensity = 1.5; // Augmenter cette valeur pour plus de lumière
         Vec3::new(1.0, 1.0, 1.0) * (1.0 - t) * intensity + Vec3::new(0.5, 0.7, 1.0) * t * intensity
-         
     }
 }
 
@@ -90,7 +89,7 @@ fn main() {
                     }
                     "scene3" => {
                         // Caméra vue de dessus
-                        look_from = Point3::new(0.0, 20.0, 0.0);
+                        look_from = Point3::new(0.0, 10.0, 0.0);
                         look_at = Point3::new(0.0, 0.0, 0.0);
                         vup = Vec3::new(1.0, 0.0, 0.0); // vecteur vers le haut aligné horizontalement
                     }
@@ -119,8 +118,8 @@ fn main() {
                         list.push(
                             Box::new(
                                 Sphere::sphere(
-                                    Point3::new(2.0, 1.0, 0.0),
-                                    1.0,
+                                    Point3::new(5.0, 1.5, 0.0),
+                                    1.5,
                                     Material::Dielectric {
                                         ref_idx: 1.5,
                                     }

@@ -1,3 +1,3 @@
 #!/bin/bash
 clear
-cargo run "cube cylindre" scene2 >data/output29.ppm
+cargo run "cube sphere cylindre" scene1 >data/output.ppm
