@@ -68,7 +68,7 @@ fn main() {
             let dist_to_focus = 10.0;
             let apeture = 0.1;
             //check scene
-            if !args[2].is_empty() {
+            if args.len() > 3 && !args[2].is_empty() {
                 match args[2].as_str() {
                     "default" => {
                         look_from = Point3::new(13.0, 10.0, 10.0);
@@ -77,15 +77,15 @@ fn main() {
                     }
                     "scene1" => {
                         // Caméra vue de côté gauche
-                        look_from = Point3::new(-13.0, 5.0, 3.0);
-                        look_at = Point3::new(0.0, 0.0, 0.0);
+                        look_from = Point3::new(-2.0, 2.0, 1.0);
+                        look_at = Point3::new(0.0, 0.0, -1.0);
                         vup = Vec3::new(0.0, 1.0, 0.0);
                     }
                     "scene2" => {
                         // Caméra vue de côté droit
-                        look_from = Point3::new(13.0, 5.0, -3.0);
+                        look_from = Point3::new(2.0, 2.0, 1.0);
                         look_at = Point3::new(0.0, 0.0, 0.0);
-                        vup = Vec3::new(0.0, 1.0, 0.0);
+                        vup = Vec3::new(0.0, 1.0, 2.0);
                     }
                     "scene3" => {
                         // Caméra vue de dessus
@@ -97,7 +97,7 @@ fn main() {
                         actif = true;
                     }
                 }
-            }
+            } 
             if actif {
                 eprintln!("scene not found");
                 return;
@@ -106,7 +106,7 @@ fn main() {
                 look_from,
                 look_at,
                 vup,
-                20.0,
+                40.0,
                 aspect_ratio,
                 apeture,
                 dist_to_focus
